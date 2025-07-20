@@ -1,0 +1,21 @@
+[project]
+name = "homepy"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Nicholas Zolton",email = "nmisc@zolton.me"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    "typer (>=0.16.0,<0.17.0)",
+    "rich (>=14.0.0,<15.0.0)"
+]
+
+[tool.poetry.scripts]
+homepy = "homepy.app:app"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
