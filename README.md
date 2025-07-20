@@ -7,21 +7,25 @@ Similar to something like [Pulumi](https://github.com/pulumi/pulumi) or [SST](ht
 Here's a simple example:
 
 ```python
-from homepy import Home, SymlinkResource, ReadOnlyResource
+from homepy import Home
+from homepy.resources import SymlinkResource
 
-home = Home()
+def main():
+    home = Home()
 
 # we add any resources that we want to create/manage to the home object
-resources = [
-    SymlinkResource("files/home/hello.txt", "hello.txt", force=True), # force=True will overwrite the file if it already exists
-    SymlinkResource("files/git/", ".config/git/", force=True),
-    ReadOnlyResource("config/settings.json", '{"setting": "value"}') # ensures the configuration file is read-only
-]
+    resources = [
+        SymlinkResource("files/home/hello.txt", "hello.txt", force=True), # force=True will overwrite the file if it already exists
+        SymlinkResource("files/git/", ".config/git/", force=True)
+    ]
 
-for resource in resources:
-    home.resources.append(resource)
+    for resource in resources:
+        home.resources.append(resource)
 
-home.generate()
+    home.generate()
+
+if __name__ == "__main__":
+    main()
 ```
 
 Then, all we need to do is run `python main.py` and we'll have our home configuration generated!
@@ -35,8 +39,3 @@ Home created!
 $ cd ~ && cat hello.txt
 Hello, world!
 ```
-
-## Contributing
-
-We use [uv](https://docs.astral.sh/uv/) to manage our development environment.
-
