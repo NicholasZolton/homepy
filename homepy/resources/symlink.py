@@ -96,6 +96,12 @@ class SymlinkResource(HomeResource):
                 print(f"Target directory exists, skipping: {self.target}")
                 return
 
-        # If none of the above conditions apply, create the symbolic link
+        # Final check: only create symlink if target does not exist
+        if self.target.exists() or self.target.is_symlink():
+            print(
+                f"Final check: Target still exists, not creating symlink: {self.target}"
+            )
+            return
+
         os.symlink(self.source, self.target, target_is_directory=self.source.is_dir())
         print(f"Created symlink: {self.source} -> {self.target}")
