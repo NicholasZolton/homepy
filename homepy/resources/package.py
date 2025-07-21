@@ -4,7 +4,14 @@ import subprocess
 
 
 class PackageResource(HomeResource):
-    """A resource for managing Python packages. Does not handle uninstalling packages, only ensuring they are installed."""
+    """
+    A resource for managing Python packages. Does not handle uninstalling packages, only ensuring they are installed.
+
+    Attributes:
+        package (str): The name of the package to install.
+        manager (Literal["apt", "brew", "nix", "pip", "snap"]): The package manager to use.
+        installed (bool): Whether the package is already installed.
+    """
 
     package: str
     manager: Literal["apt", "brew", "nix", "pip", "snap"] = "apt"
