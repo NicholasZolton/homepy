@@ -23,6 +23,14 @@ class PackageResource(HomeResource):
             elif self.manager == "nix":
                 self._nix_env_install(verbose)
         else:
+            if self.manager == "apt":
+                self._apt_uninstall(verbose)
+
+            elif self.manager == "brew":
+                self._brew_uninstall(verbose)
+
+            elif self.manager == "nix":
+                self._nix_env_uninstall(verbose)
 
     def _apt_install(self, verbose: bool = False) -> None:
         """Install the package using apt."""
