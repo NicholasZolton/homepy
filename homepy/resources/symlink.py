@@ -1,5 +1,7 @@
 from pathlib import Path
 import os
+import shutil
+from typing import Tuple, Optional
 from ..home import HomeResource
 
 
@@ -26,335 +28,221 @@ class SymlinkResource(HomeResource):
 
     def generate(self, verbose: bool = False) -> None:
         """Generate the symbolic link."""
-        # Resolve source and target paths to absolute paths for existence checks and operations
+        resolved_source, resolved_target = self._resolve_paths()
+        
+        if not self._validate_source(resolved_source, verbose):
+            return
+            
+        self._ensure_parent_directories(resolved_target)
+        symlink_source = self._calculate_relative_path(resolved_source, resolved_target)
+        
+        if resolved_target.is_symlink():
+            if self._handle_existing_symlink(resolved_target, resolved_source, symlink_source, verbose):
+                return
+        elif not resolved_target.exists():
+            self._create_symlink(symlink_source, resolved_target, resolved_source, verbose)
+            return
+        else:
+            if self._handle_existing_file_or_directory(resolved_target, resolved_source, symlink_source, verbose):
+                return
+
+    def _resolve_paths(self) -> Tuple[Path, Path]:
+        """Resolve source and target paths to absolute paths."""
         resolved_source = self.source
         if not self.source.is_absolute():
             resolved_source = Path(os.getcwd()) / self.source
 
         resolved_target = self.target
-        # Resolve target path relative to home directory (unless it's already absolute)
         if not self.target.is_absolute():
             resolved_target = Path.home() / self.target
+            
+        return resolved_source, resolved_target
 
-        # Ensure source exists
+    def _validate_source(self, resolved_source: Path, verbose: bool) -> bool:
+        """Check if source exists."""
         if not resolved_source.exists():
-            print(f"Source path does not exist, skipping: {resolved_source}")
-            return
+            if verbose:
+                print(f"Source path does not exist, skipping: {resolved_source}")
+            return False
+        return True
 
-        # Create parent directories for the target if they don't exist
+    def _ensure_parent_directories(self, resolved_target: Path) -> None:
+        """Create parent directories for the target if they don't exist."""
         resolved_target.parent.mkdir(parents=True, exist_ok=True)
 
-        # Calculate the relative path from target to source for the symlink
+    def _calculate_relative_path(self, resolved_source: Path, resolved_target: Path) -> str:
+        """Calculate the relative path from target to source for the symlink."""
         try:
-            symlink_source = os.path.relpath(resolved_source, resolved_target.parent)
+            return os.path.relpath(resolved_source, resolved_target.parent)
         except ValueError:
             # If relative path calculation fails (e.g., different drives on Windows), use absolute path
-            symlink_source = str(resolved_source)
+            return str(resolved_source)
 
-        # handle the case where the target is a symlink (check this first since broken symlinks return False for exists())
-        if resolved_target.is_symlink():
-            existing_link = Path(os.readlink(resolved_target))
-            # Check if existing symlink points to the same resolved source
-            if existing_link.is_absolute():
-                source_matches = str(existing_link) == str(resolved_source)
-            else:
-                # Resolve the existing relative symlink to compare
-                existing_resolved = (resolved_target.parent / existing_link).resolve()
-                source_matches = str(existing_resolved) == str(resolved_source)
-            
-            # Also check if the symlink format matches what we want to create
-            format_matches = str(existing_link) == symlink_source
-                
-            if source_matches and format_matches:
+    def _handle_existing_symlink(self, resolved_target: Path, resolved_source: Path, 
+                                symlink_source: str, verbose: bool) -> bool:
+        """Handle case where target is already a symlink. Returns True if handled (should return from generate)."""
+        existing_link = Path(os.readlink(resolved_target))
+        source_matches = self._symlink_points_to_source(existing_link, resolved_target, resolved_source)
+        format_matches = str(existing_link) == symlink_source
+        
+        if source_matches and format_matches:
+            if verbose:
                 print(f"Target already exists, skipping: {resolved_target}")
-                return
-            elif source_matches and not format_matches:
-                # Source is correct but format is wrong (e.g., absolute vs relative) - update it
+            return True
+        elif source_matches and not format_matches:
+            if verbose:
                 print(f"Target symlink has correct source but wrong format, updating: {resolved_target}")
-                resolved_target.unlink()
-                os.symlink(
-                    symlink_source, resolved_target, target_is_directory=resolved_source.is_dir()
-                )
-                print(f"Created symlink: {symlink_source} -> {resolved_target}")
-                return
-            else:
-                # Source is wrong
-                if not self.force:
-                    print(
-                        f"Target is a symlink but points to the wrong source, skipping: {resolved_target}"
-                    )
-                    return
-                else:
-                    print(
-                        f"Target is a symlink but points to the wrong source, overwriting: {resolved_target}"
-                    )
-                    resolved_target.unlink()
-                    os.symlink(
-                        symlink_source, resolved_target, target_is_directory=resolved_source.is_dir()
-                    )
-                    print(f"Created symlink: {symlink_source} -> {resolved_target}")
-                    return
+            self._create_symlink(symlink_source, resolved_target, resolved_source, verbose, replace=True)
+            return True
+        else:
+            return self._handle_wrong_symlink(resolved_target, resolved_source, symlink_source, verbose)
 
-        # handle the case where the target does not exist
-        if not resolved_target.exists():
-            # create the symlink if the target doesn't exist
-            os.symlink(
-                symlink_source, resolved_target, target_is_directory=resolved_source.is_dir()
-            )
-            print(f"Created symlink: {symlink_source} -> {resolved_target}")
-            return
+    def _symlink_points_to_source(self, existing_link: Path, resolved_target: Path, resolved_source: Path) -> bool:
+        """Check if existing symlink points to the correct source."""
+        if existing_link.is_absolute():
+            return str(existing_link) == str(resolved_source)
+        else:
+            existing_resolved = (resolved_target.parent / existing_link).resolve()
+            return str(existing_resolved) == str(resolved_source)
 
-        # now make sure that the target and source are the same type
-        if resolved_target.is_file() != resolved_source.is_file():
-            if not self.force:
-                print(
-                    f"Target and source are not the same type, skipping: {resolved_target}"
-                )
-                return
-            else:
-                print(
-                    f"Target and source are the same type, overwriting: {resolved_target}"
-                )
-                # guarantee removal of existing target
-                if resolved_target.is_file() or resolved_target.is_symlink():
-                    resolved_target.unlink()
-                elif resolved_target.is_dir():
-                    resolved_target.rmdir()
-                os.symlink(
-                    symlink_source, resolved_target, target_is_directory=resolved_source.is_dir()
-                )
-                print(f"Created symlink: {symlink_source} -> {resolved_target}")
-                return
+    def _handle_wrong_symlink(self, resolved_target: Path, resolved_source: Path, 
+                             symlink_source: str, verbose: bool) -> bool:
+        """Handle symlink that points to wrong source. Returns True if handled."""
+        if not self.force:
+            if verbose:
+                print(f"Target is a symlink but points to the wrong source, skipping: {resolved_target}")
+            return True
+        else:
+            if verbose:
+                print(f"Target is a symlink but points to the wrong source, overwriting: {resolved_target}")
+            self._create_symlink(symlink_source, resolved_target, resolved_source, verbose, replace=True)
+            return True
 
-        # now handle the case where the target and source are files
-        if resolved_target.is_file() and resolved_source.is_file():
-            if resolved_target.read_text() == resolved_source.read_text():
-                print(
-                    f"Target and source are the same, making target a symlink: {resolved_target}"
-                )
-                resolved_target.unlink()
-                os.symlink(
-                    symlink_source,
-                    resolved_target,
-                    target_is_directory=resolved_source.is_dir(),
-                )
-                print(f"Created symlink: {symlink_source} -> {resolved_target}")
-                return
-            else:
-                if not self.force:
-                    print(
-                        f"Target and source are not the same, skipping: {resolved_target}"
-                    )
-                    return
-                else:
-                    print(f"Target and source are the same, overwriting: {resolved_target}")
-                    resolved_target.unlink()
-                    os.symlink(
-                        symlink_source,
-                        resolved_target,
-                        target_is_directory=resolved_source.is_dir(),
-                    )
-                    print(f"Created symlink: {symlink_source} -> {resolved_target}")
-                    return
+    def _handle_existing_file_or_directory(self, resolved_target: Path, resolved_source: Path, 
+                                         symlink_source: str, verbose: bool) -> bool:
+        """Handle case where target exists but is not a symlink. Returns True if handled."""
+        if self._different_types(resolved_target, resolved_source):
+            return self._handle_type_mismatch(resolved_target, resolved_source, symlink_source, verbose)
+        elif resolved_target.is_file() and resolved_source.is_file():
+            return self._handle_existing_file(resolved_target, resolved_source, symlink_source, verbose)
+        elif resolved_target.is_dir() and resolved_source.is_dir():
+            return self._handle_existing_directory(resolved_target, resolved_source, symlink_source, verbose)
+        else:
+            return self._handle_unhandled_case(resolved_target, resolved_source, symlink_source, verbose)
 
-        # now handle the case where the target and source are directories
-        if resolved_target.is_dir() and resolved_source.is_dir():
-            # check if everything is identical
-            if all(
+    def _different_types(self, resolved_target: Path, resolved_source: Path) -> bool:
+        """Check if target and source are different types (file vs directory)."""
+        return resolved_target.is_file() != resolved_source.is_file()
+
+    def _handle_type_mismatch(self, resolved_target: Path, resolved_source: Path, 
+                             symlink_source: str, verbose: bool) -> bool:
+        """Handle case where target and source are different types."""
+        if not self.force:
+            if verbose:
+                print(f"Target and source are not the same type, skipping: {resolved_target}")
+            return True
+        else:
+            if verbose:
+                print(f"Target and source are different types, overwriting: {resolved_target}")
+            self._create_symlink(symlink_source, resolved_target, resolved_source, verbose, replace=True)
+            return True
+
+    def _handle_existing_file(self, resolved_target: Path, resolved_source: Path, 
+                             symlink_source: str, verbose: bool) -> bool:
+        """Handle case where both target and source are files."""
+        if self._files_identical(resolved_target, resolved_source):
+            if verbose:
+                print(f"Target and source are the same, making target a symlink: {resolved_target}")
+            self._create_symlink(symlink_source, resolved_target, resolved_source, verbose, replace=True)
+            return True
+        else:
+            return self._handle_different_files(resolved_target, resolved_source, symlink_source, verbose)
+
+    def _files_identical(self, resolved_target: Path, resolved_source: Path) -> bool:
+        """Check if two files have identical content."""
+        try:
+            return resolved_target.read_text() == resolved_source.read_text()
+        except (OSError, UnicodeDecodeError):
+            return False
+
+    def _handle_different_files(self, resolved_target: Path, resolved_source: Path, 
+                               symlink_source: str, verbose: bool) -> bool:
+        """Handle case where target and source files have different content."""
+        if not self.force:
+            if verbose:
+                print(f"Target and source are not the same, skipping: {resolved_target}")
+            return True
+        else:
+            if verbose:
+                print(f"Target and source are different, overwriting: {resolved_target}")
+            self._create_symlink(symlink_source, resolved_target, resolved_source, verbose, replace=True)
+            return True
+
+    def _handle_existing_directory(self, resolved_target: Path, resolved_source: Path, 
+                                  symlink_source: str, verbose: bool) -> bool:
+        """Handle case where both target and source are directories."""
+        if self._directories_identical(resolved_target, resolved_source):
+            if verbose:
+                print(f"Target and source are identical, making target a symlink: {resolved_target}")
+            self._create_symlink(symlink_source, resolved_target, resolved_source, verbose, replace=True)
+            return True
+        else:
+            return self._handle_different_directories(resolved_target, resolved_source, symlink_source, verbose)
+
+    def _directories_identical(self, resolved_target: Path, resolved_source: Path) -> bool:
+        """Check if two directories have identical content."""
+        try:
+            return all(
                 (resolved_source / item).read_text() == (resolved_target / item).read_text()
                 for item in resolved_source.iterdir()
                 if (resolved_source / item).is_file()
-            ):
-                print(
-                    f"Target and source are identical, making target a symlink: {resolved_target}"
-                )
-                resolved_target.rmdir()
-                os.symlink(
-                    symlink_source,
-                    resolved_target,
-                    target_is_directory=resolved_source.is_dir(),
-                )
-                print(f"Created symlink: {symlink_source} -> {resolved_target}")
-                return
-            else:
-                if not self.force:
-                    print(
-                        f"Target and source are not identical, skipping: {resolved_target}"
-                    )
-                    return
-                else:
-                    print(
-                        f"Target and source are identical, overwriting: {resolved_target}"
-                    )
-                    resolved_target.rmdir()
-                    os.symlink(
-                        symlink_source,
-                        resolved_target,
-                        target_is_directory=resolved_source.is_dir(),
-                    )
-                    print(f"Created symlink: {symlink_source} -> {resolved_target}")
-                    return
-
-        # If we reach here, target exists but doesn't match any handled cases
-        if resolved_target.exists():
-            if not self.force:
-                print(f"Target exists but cannot be handled, skipping: {resolved_target}")
-                return
-            else:
-                print(f"Target exists, forcing overwrite: {resolved_target}")
-                if resolved_target.is_file() or resolved_target.is_symlink():
-                    resolved_target.unlink()
-                elif resolved_target.is_dir():
-                    import shutil
-                    shutil.rmtree(resolved_target)
-                os.symlink(
-                    symlink_source,
-                    resolved_target,
-                    target_is_directory=resolved_source.is_dir(),
-                )
-                print(f"Created symlink: {symlink_source} -> {resolved_target}")
-                return
-
-        # Create parent directories for the target if they don't exist
-        self.target.parent.mkdir(parents=True, exist_ok=True)
-
-        # handle the case where the target is a symlink (check this first since broken symlinks return False for exists())
-        if self.target.is_symlink():
-            if str(Path(os.readlink(self.target))) == str(self.source):
-                print(f"Target already exists, skipping: {self.target}")
-                return
-            else:
-                if not self.force:
-                    print(
-                        f"Target is a symlink but points to the wrong source, skipping: {self.target}"
-                    )
-                    return
-                else:
-                    print(
-                        f"Target is a symlink but points to the wrong source, overwriting: {self.target}"
-                    )
-                    self.target.unlink()
-                    os.symlink(
-                        self.source, self.target, target_is_directory=self.source.is_dir()
-                    )
-                    print(f"Created symlink: {self.source} -> {self.target}")
-                    return
-
-        # handle the case where the target does not exist
-        if not self.target.exists():
-            # create the symlink if the target doesn't exist
-            os.symlink(
-                self.source, self.target, target_is_directory=self.source.is_dir()
             )
-            print(f"Created symlink: {self.source} -> {self.target}")
-            return
-        # now make sure that the target and source are the same type
-        if self.target.is_file() != self.source.is_file():
-            if not self.force:
-                print(
-                    f"Target and source are not the same type, skipping: {self.target}"
-                )
-                return
-            else:
-                print(
-                    f"Target and source are the same type, overwriting: {self.target}"
-                )
-                # guarantee removal of existing target
-                if self.target.is_file() or self.target.is_symlink():
-                    self.target.unlink()
-                elif self.target.is_dir():
-                    self.target.rmdir()
-                os.symlink(
-                    self.source, self.target, target_is_directory=self.source.is_dir()
-                )
-                print(f"Created symlink: {self.source} -> {self.target}")
-                return
+        except (OSError, UnicodeDecodeError):
+            return False
 
-        # now handle the case where the target and source are files
-        if self.target.is_file() and self.source.is_file():
-            if self.target.read_text() == self.source.read_text():
-                print(
-                    f"Target and source are the same, making target a symlink: {self.target}"
-                )
-                self.target.unlink()
-                os.symlink(
-                    self.source,
-                    self.target,
-                    target_is_directory=self.source.is_dir(),
-                )
-                print(f"Created symlink: {self.source} -> {self.target}")
-                return
-            else:
-                if not self.force:
-                    print(
-                        f"Target and source are not the same, skipping: {self.target}"
-                    )
-                    return
-                else:
-                    print(f"Target and source are the same, overwriting: {self.target}")
-                    self.target.unlink()
-                    os.symlink(
-                        self.source,
-                        self.target,
-                        target_is_directory=self.source.is_dir(),
-                    )
-                    print(f"Created symlink: {self.source} -> {self.target}")
-                    return
+    def _handle_different_directories(self, resolved_target: Path, resolved_source: Path, 
+                                     symlink_source: str, verbose: bool) -> bool:
+        """Handle case where target and source directories have different content."""
+        if not self.force:
+            if verbose:
+                print(f"Target and source are not identical, skipping: {resolved_target}")
+            return True
+        else:
+            if verbose:
+                print(f"Target and source are different, overwriting: {resolved_target}")
+            self._create_symlink(symlink_source, resolved_target, resolved_source, verbose, replace=True)
+            return True
 
-        # now handle the case where the target and source are directories
-        if self.target.is_dir() and self.source.is_dir():
-            # check if everything is identical
-            if all(
-                (self.source / item).read_text() == (self.target / item).read_text()
-                for item in self.source.iterdir()
-                if (self.source / item).is_file()
-            ):
-                print(
-                    f"Target and source are identical, making target a symlink: {self.target}"
-                )
-                self.target.rmdir()
-                os.symlink(
-                    self.source,
-                    self.target,
-                    target_is_directory=self.source.is_dir(),
-                )
-                print(f"Created symlink: {self.source} -> {self.target}")
-                return
-            else:
-                if not self.force:
-                    print(
-                        f"Target and source are not identical, skipping: {self.target}"
-                    )
-                    return
-                else:
-                    print(
-                        f"Target and source are identical, overwriting: {self.target}"
-                    )
-                    self.target.rmdir()
-                    os.symlink(
-                        self.source,
-                        self.target,
-                        target_is_directory=self.source.is_dir(),
-                    )
-                    print(f"Created symlink: {self.source} -> {self.target}")
-                    return
+    def _handle_unhandled_case(self, resolved_target: Path, resolved_source: Path, 
+                              symlink_source: str, verbose: bool) -> bool:
+        """Handle any remaining unhandled cases."""
+        if not self.force:
+            if verbose:
+                print(f"Target exists but cannot be handled, skipping: {resolved_target}")
+            return True
+        else:
+            if verbose:
+                print(f"Target exists, forcing overwrite: {resolved_target}")
+            self._create_symlink(symlink_source, resolved_target, resolved_source, verbose, replace=True)
+            return True
 
-        # If we reach here, target exists but doesn't match any handled cases
-        if self.target.exists():
-            if not self.force:
-                print(f"Target exists but cannot be handled, skipping: {self.target}")
-                return
+    def _create_symlink(self, symlink_source: str, resolved_target: Path, resolved_source: Path, 
+                       verbose: bool, replace: bool = False) -> None:
+        """Create the symbolic link, optionally replacing existing target."""
+        if replace:
+            self._remove_target(resolved_target)
+            
+        os.symlink(symlink_source, resolved_target, target_is_directory=resolved_source.is_dir())
+        
+        if verbose:
+            print(f"Created symlink: {symlink_source} -> {resolved_target}")
+
+    def _remove_target(self, resolved_target: Path) -> None:
+        """Remove existing target (file, symlink, or directory)."""
+        if resolved_target.is_file() or resolved_target.is_symlink():
+            resolved_target.unlink()
+        elif resolved_target.is_dir():
+            if any(resolved_target.iterdir()):
+                shutil.rmtree(resolved_target)
             else:
-                print(f"Target exists, forcing overwrite: {self.target}")
-                if self.target.is_file() or self.target.is_symlink():
-                    self.target.unlink()
-                elif self.target.is_dir():
-                    import shutil
-                    shutil.rmtree(self.target)
-                os.symlink(
-                    self.source,
-                    self.target,
-                    target_is_directory=self.source.is_dir(),
-                )
-                print(f"Created symlink: {self.source} -> {self.target}")
-                return
+                resolved_target.rmdir()
