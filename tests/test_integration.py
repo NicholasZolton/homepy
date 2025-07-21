@@ -44,7 +44,7 @@ class TestSymlinkIntegration:
         
         # Verify symlink was created
         assert target_file.is_symlink()
-        assert target_file.readlink() == source_file
+        assert target_file.resolve() == source_file
         assert target_file.read_text() == "test config content"
 
     def test_create_directory_symlink(self, temp_dirs):
@@ -63,7 +63,7 @@ class TestSymlinkIntegration:
         
         # Verify directory symlink was created
         assert target_dir.is_symlink()
-        assert target_dir.readlink() == source_dir
+        assert target_dir.resolve() == source_dir
         assert (target_dir / "file1.txt").read_text() == "content1"
         assert (target_dir / "file2.txt").read_text() == "content2"
 
@@ -114,7 +114,7 @@ class TestSymlinkIntegration:
         
         # Verify symlink still exists and points to correct target
         assert target_file.is_symlink()
-        assert target_file.readlink() == source_file
+        assert target_file.resolve() == source_file
 
     def test_force_overwrite_wrong_symlink(self, temp_dirs):
         """Test force overwriting a symlink pointing to wrong target."""
@@ -136,7 +136,7 @@ class TestSymlinkIntegration:
         
         # Verify symlink now points to correct target
         assert target_file.is_symlink()
-        assert target_file.readlink() == source_file
+        assert target_file.resolve() == source_file
         assert target_file.read_text() == "correct content"
 
     def test_skip_wrong_symlink_without_force(self, temp_dirs):
@@ -159,7 +159,7 @@ class TestSymlinkIntegration:
         
         # Verify symlink still points to wrong target
         assert target_file.is_symlink()
-        assert target_file.readlink() == wrong_source
+        assert target_file.resolve() == wrong_source
 
     def test_replace_identical_file_with_symlink(self, temp_dirs):
         """Test replacing an identical file with a symlink."""
@@ -178,7 +178,7 @@ class TestSymlinkIntegration:
         
         # Verify file was replaced with symlink
         assert target_file.is_symlink()
-        assert target_file.readlink() == source_file
+        assert target_file.resolve() == source_file
         assert target_file.read_text() == content
 
     def test_skip_different_file_without_force(self, temp_dirs):
@@ -215,7 +215,7 @@ class TestSymlinkIntegration:
         
         # Verify file was replaced with symlink
         assert target_file.is_symlink()
-        assert target_file.readlink() == source_file
+        assert target_file.resolve() == source_file
         assert target_file.read_text() == "source content"
 
     def test_home_integration(self, temp_dirs):
@@ -253,4 +253,4 @@ class TestSymlinkIntegration:
         
         # Verify directory was replaced with symlink
         assert target_dir.is_symlink()
-        assert target_dir.readlink() == source_dir
+        assert target_dir.resolve() == source_dir
