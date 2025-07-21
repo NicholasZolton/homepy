@@ -5,7 +5,7 @@
 - Install dependencies: `poetry install`
 - Install test dependencies: `poetry install --extras test`
 - Run CLI: `poetry run homepy` or `python -m homepy`
-- Test: `poetry run pytest tests/` or `./run_tests.sh`
+- Test: `poetry run pytest tests/`
 
 ## Code Style
 - Python 3.12+ required
