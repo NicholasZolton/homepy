@@ -1,7 +1,7 @@
 from pathlib import Path
 import os
 import shutil
-from typing import Tuple, Optional
+from typing import Tuple
 from ..home import HomeResource
 
 
