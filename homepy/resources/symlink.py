@@ -56,16 +56,29 @@ class SymlinkResource(HomeResource):
             existing_link = Path(os.readlink(resolved_target))
             # Check if existing symlink points to the same resolved source
             if existing_link.is_absolute():
-                symlinks_match = str(existing_link) == str(resolved_source)
+                source_matches = str(existing_link) == str(resolved_source)
             else:
                 # Resolve the existing relative symlink to compare
                 existing_resolved = (resolved_target.parent / existing_link).resolve()
-                symlinks_match = str(existing_resolved) == str(resolved_source)
+                source_matches = str(existing_resolved) == str(resolved_source)
+            
+            # Also check if the symlink format matches what we want to create
+            format_matches = str(existing_link) == symlink_source
                 
-            if symlinks_match:
+            if source_matches and format_matches:
                 print(f"Target already exists, skipping: {resolved_target}")
                 return
+            elif source_matches and not format_matches:
+                # Source is correct but format is wrong (e.g., absolute vs relative) - update it
+                print(f"Target symlink has correct source but wrong format, updating: {resolved_target}")
+                resolved_target.unlink()
+                os.symlink(
+                    symlink_source, resolved_target, target_is_directory=resolved_source.is_dir()
+                )
+                print(f"Created symlink: {symlink_source} -> {resolved_target}")
+                return
             else:
+                # Source is wrong
                 if not self.force:
                     print(
                         f"Target is a symlink but points to the wrong source, skipping: {resolved_target}"
