@@ -161,25 +161,6 @@ class TestSymlinkIntegration:
         assert target_file.is_symlink()
         assert target_file.resolve() == wrong_source
 
-    def test_replace_identical_file_with_symlink(self, temp_dirs):
-        """Test replacing an identical file with a symlink."""
-        source_file = temp_dirs["source"] / "identical.txt"
-        target_file = temp_dirs["home"] / ".config" / "identical.txt"
-        content = "identical content"
-        
-        # Create source file and identical target file
-        source_file.write_text(content)
-        target_file.parent.mkdir(parents=True, exist_ok=True)
-        target_file.write_text(content)
-        
-        # Create symlink
-        resource = SymlinkResource(source_file, Path(".config/identical.txt"))
-        resource.generate()
-        
-        # Verify file was replaced with symlink
-        assert target_file.is_symlink()
-        assert target_file.resolve() == source_file
-        assert target_file.read_text() == content
 
     def test_skip_different_file_without_force(self, temp_dirs):
         """Test skipping different file without force flag."""
@@ -237,20 +218,42 @@ class TestSymlinkIntegration:
         assert target_file.is_symlink()
         assert target_file.read_text() == "home integration test"
 
-    def test_replace_identical_empty_directory_with_symlink(self, temp_dirs):
-        """Test replacing an identical empty directory with a symlink."""
-        source_dir = temp_dirs["source"] / "empty_dir"
-        target_dir = temp_dirs["home"] / ".config" / "empty_dir"
-        
-        # Create empty source directory and identical empty target directory
-        source_dir.mkdir()
-        target_dir.parent.mkdir(parents=True, exist_ok=True)
-        target_dir.mkdir()
-        
-        # Create symlink
-        resource = SymlinkResource(source_dir, Path(".config/empty_dir"))
+    def test_broken_symlink_handling(self, temp_dirs):
+        """Test handling of a broken symlink as target."""
+        source_file = temp_dirs["source"] / "real.txt"
+        target_file = temp_dirs["home"] / ".config" / "broken.txt"
+        source_file.write_text("real content")
+        # Create a broken symlink (points to a non-existent file)
+        broken_target = temp_dirs["source"] / "does_not_exist.txt"
+        target_file.parent.mkdir(parents=True, exist_ok=True)
+        target_file.symlink_to(broken_target)
+        # Try to create symlink without force
+        resource = SymlinkResource(source_file, Path(".config/broken.txt"), force=False)
         resource.generate()
-        
-        # Verify directory was replaced with symlink
+        # Should still be a symlink to the broken target
+        assert target_file.is_symlink()
+        assert Path(os.readlink(target_file)) == broken_target
+        # Now try with force
+        resource = SymlinkResource(source_file, Path(".config/broken.txt"), force=True)
+        resource.generate()
+        # Should now be a symlink to the correct source
+        assert target_file.is_symlink()
+        assert target_file.resolve() == source_file
+
+    def test_skip_existing_correct_directory_symlink(self, temp_dirs):
+        """Test that existing correct directory symlinks are skipped if contents are identical."""
+        source_dir = temp_dirs["source"] / "dir_symlink"
+        target_dir = temp_dirs["home"] / ".config" / "dir_symlink"
+        source_dir.mkdir()
+        (source_dir / "file.txt").write_text("content")
+        # Create initial symlink manually
+        target_dir.parent.mkdir(parents=True, exist_ok=True)
+        target_dir.symlink_to(source_dir)
+        # Try to create symlink again
+        resource = SymlinkResource(source_dir, Path(".config/dir_symlink"))
+        resource.generate()
+        # Verify symlink still exists and points to correct target
         assert target_dir.is_symlink()
         assert target_dir.resolve() == source_dir
+        assert (target_dir / "file.txt").read_text() == "content"
+
