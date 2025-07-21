@@ -6,10 +6,9 @@ import subprocess
 class PackageResource(HomeResource):
     """A resource for managing Python packages. Does not handle uninstalling packages, only ensuring they are installed."""
 
-    def __init__(self, package: str) -> None:
-        self.package: str = package
-        self.manager: Literal["apt", "brew", "nix", "pip", "snap"] = "apt"
-        self.installed: bool = True
+    package: str
+    manager: Literal["apt", "brew", "nix", "pip", "snap"] = "apt"
+    installed: bool = True
 
     def generate(self, verbose: bool = False) -> None:
         """Generate the package."""

@@ -35,6 +35,8 @@ if __name__ == "__main__":
 
 Then, all we need to do is run `python main.py` and we'll have our home configuration generated!
 
+> Since this is currently a thin wrapper around os commands and does not manage state, it will NOT remove anything automatically, such as if you remove a PackageResource. Instead, you will need to add installed=False to the PackageResource.
+
 # TODO
 
 - [ ] Add a `revert` method that tracks the state of the machine prior to generation and can revert everything to the way it was before non-destructively.

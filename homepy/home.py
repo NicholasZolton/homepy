@@ -1,9 +1,10 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import List
 from rich.progress import track
+from pydantic import BaseModel
 
 
-class HomeResource:
+class HomeResource(ABC, BaseModel):
     @abstractmethod
     def generate(self, verbose: bool = False) -> None:
         """Generate the resource."""

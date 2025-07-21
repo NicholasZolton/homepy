@@ -1,6 +1,6 @@
 [project]
 name = "homepy"
-version = "0.1.11"
+version = "0.2.11"
 description = ""
 authors = [
     {name = "Nicholas Zolton",email = "nmisc@zolton.me"}

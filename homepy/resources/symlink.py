@@ -21,10 +21,9 @@ class SymlinkResource(HomeResource):
             directories at the target path if they exist.
     """
 
-    def __init__(self, source: Path, target: Path, force: bool = False) -> None:
-        self.source: Path = Path(source)
-        self.target: Path = Path(target)
-        self.force: bool = force
+    source: Path
+    target: Path
+    force: bool = False
 
     def generate(self, verbose: bool = False) -> None:
         """Generate the symbolic link according to simplified rules."""
