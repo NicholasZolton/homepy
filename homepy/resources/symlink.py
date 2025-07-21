@@ -1,5 +1,4 @@
 from pathlib import Path
-import shutil
 import os
 from ..home import HomeResource
 
@@ -43,65 +42,126 @@ class SymlinkResource(HomeResource):
         # Create parent directories for the target if they don't exist
         self.target.parent.mkdir(parents=True, exist_ok=True)
 
-        # Handle force logic if the target exists
-        if not (self.target.exists() or self.target.is_symlink()):
-            # Create the symbolic link if the target doesn't exist
+        # handle the case where the target does not exist
+        if not self.target.exists():
+            # create the symlink if the target doesn't exist
             os.symlink(
                 self.source, self.target, target_is_directory=self.source.is_dir()
             )
             print(f"Created symlink: {self.source} -> {self.target}")
             return
 
-        # Check if the existing symlink points to the source
-        if self.target.is_symlink() and str(Path(os.readlink(self.target))) == str(
-            self.source
+        # handle the case where the target is a symlink
+        if (
+            self.target.exists()
+            and self.target.is_symlink()
+            and str(Path(os.readlink(self.target))) == str(self.source)
         ):
+            print(f"Target already exists, skipping: {self.target}")
             return
-
-        # Handle cases where the target is a file
-        if self.target.is_file():
-            if (
-                self.source.is_file()
-                and self.target.read_text() == self.source.read_text()
-            ):
-                if verbose:
-                    print(
-                        f"Replacing identical file with symlink to source: {self.target}"
-                    )
-                self.target.unlink()
-            elif self.force:
-                print(f"Target file exists, overwriting with force: {self.target}")
-                self.target.unlink()
+        elif self.target.exists() and self.target.is_symlink():
+            if not self.force:
+                print(
+                    f"Target is a symlink but points to the wrong source, skipping: {self.target}"
+                )
+                return
             else:
-                print(f"Target file exists, skipping: {self.target}")
+                print(
+                    f"Target is a symlink but points to the wrong source, overwriting: {self.target}"
+                )
+                self.target.unlink()
+                os.symlink(
+                    self.source, self.target, target_is_directory=self.source.is_dir()
+                )
+                print(f"Created symlink: {self.source} -> {self.target}")
                 return
 
-        # Handle cases where the target is a directory
-        elif self.target.is_dir():
-            if self.source.is_dir() and all(
+        # now make sure that the target and source are the same type
+        if self.target.is_file() != self.source.is_file():
+            if not self.force:
+                print(
+                    f"Target and source are not the same type, skipping: {self.target}"
+                )
+                return
+            else:
+                print(
+                    f"Target and source are the same type, overwriting: {self.target}"
+                )
+                # guarantee removal of existing target
+                if self.target.is_file() or self.target.is_symlink():
+                    self.target.unlink()
+                elif self.target.is_dir():
+                    self.target.rmdir()
+                os.symlink(
+                    self.source, self.target, target_is_directory=self.source.is_dir()
+                )
+                print(f"Created symlink: {self.source} -> {self.target}")
+                return
+
+        # now handle the case where the target and source are files
+        if self.target.is_file() and self.source.is_file():
+            if self.target.read_text() == self.source.read_text():
+                print(
+                    f"Target and source are the same, making target a symlink: {self.target}"
+                )
+                os.symlink(
+                    self.source,
+                    self.target,
+                    target_is_directory=self.source.is_dir(),
+                )
+                print(f"Created symlink: {self.source} -> {self.target}")
+                return
+            else:
+                if not self.force:
+                    print(
+                        f"Target and source are not the same, skipping: {self.target}"
+                    )
+                    return
+                else:
+                    print(f"Target and source are the same, overwriting: {self.target}")
+                    self.target.unlink()
+                    os.symlink(
+                        self.source,
+                        self.target,
+                        target_is_directory=self.source.is_dir(),
+                    )
+                    print(f"Created symlink: {self.source} -> {self.target}")
+                    return
+
+        # now handle the case where the target and source are directories
+        if self.target.is_dir() and self.source.is_dir():
+            # check if everything is identical
+            if all(
                 (self.source / item).read_text() == (self.target / item).read_text()
                 for item in self.source.iterdir()
                 if (self.source / item).is_file()
             ):
                 print(
-                    f"Replacing directory with symlink (identical contents): {self.target}"
+                    f"Target and source are identical, making target a symlink: {self.target}"
                 )
-                shutil.rmtree(self.target)
-            elif self.force:
-                print(f"Target directory exists, overwriting with force: {self.target}")
-                if verbose:
-                    print(f"Replacing directory: {self.target}")
-                shutil.rmtree(self.target)
-            else:
-                print(f"Target directory exists, skipping: {self.target}")
+                self.target.rmdir()
+                os.symlink(
+                    self.source,
+                    self.target,
+                    target_is_directory=self.source.is_dir(),
+                )
+                print(f"Created symlink: {self.source} -> {self.target}")
                 return
-
-        # Final check: only create symlink if target does not exist
-        if self.target.exists() or self.target.is_symlink():
-            print(
-                f"Final check: Target still exists, not creating symlink: {self.target}"
-            )
-            return
-
-        os.symlink(self.source, self.target, target_is_directory=self.source.is_dir())
-        print(f"Created symlink: {self.source} -> {self.target}")
+            else:
+                if not self.force:
+                    print(
+                        f"Target and source are not identical, skipping: {self.target}"
+                    )
+                    return
+                else:
+                    print(
+                        f"Target and source are identical, overwriting: {self.target}"
+                    )
+                    self.target.rmdir()
+                    os.symlink(
+                        self.source,
+                        self.target,
+                        target_is_directory=self.source.is_dir(),
+                    )
+                    print(f"Created symlink: {self.source} -> {self.target}")
+                    return
