@@ -14,7 +14,7 @@ class PackageResource(HomeResource):
     """
 
     package: str
-    manager: Literal["apt", "brew", "nix", "pip", "snap"] = "apt"
+    manager: Literal["apt", "brew", "nix"]
     installed: bool = True
 
     def generate(self, verbose: bool = False) -> None:
