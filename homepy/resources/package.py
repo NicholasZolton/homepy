@@ -9,7 +9,7 @@ class PackageResource(HomeResource):
 
     Attributes:
         package (str): The name of the package to install.
-        manager (Literal["apt", "brew", "nix", "pip", "snap"]): The package manager to use.
+        manager (Literal["apt", "brew", "nix"]): The package manager to use.
         installed (bool): Whether the package is already installed.
     """
 
