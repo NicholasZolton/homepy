@@ -43,7 +43,7 @@ class SymlinkResource(HomeResource):
         self.target.parent.mkdir(parents=True, exist_ok=True)
 
         # handle the case where the target does not exist
-        if not self.target.exists():
+        if not self.target.is_symlink() and not self.target.exists():
             # create the symlink if the target doesn't exist
             os.symlink(
                 self.source, self.target, target_is_directory=self.source.is_dir()
