@@ -1,4 +1,4 @@
-from home import HomeResource
+from ..home import HomeResource
 from typing import Literal
 import subprocess
 
