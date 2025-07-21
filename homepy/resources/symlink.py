@@ -113,7 +113,6 @@ class SymlinkResource(HomeResource):
         """Create parent directories for the target if they don't exist."""
         resolved_target.parent.mkdir(parents=True, exist_ok=True)
 
-
     def _symlink_points_to_source(
         self, existing_link: Path, resolved_target: Path, resolved_source: Path
     ) -> bool:
@@ -141,9 +140,6 @@ class SymlinkResource(HomeResource):
             resolved_target,
             target_is_directory=resolved_source.is_dir(),
         )
-
-        if verbose:
-            print(f"Created symlink: {symlink_source} -> {resolved_target}")
 
     def _remove_target(self, resolved_target: Path) -> None:
         """Remove existing target (file, symlink, or directory)."""
