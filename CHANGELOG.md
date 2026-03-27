@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.4.0 (2026-03-27)
+
+### Features
+
+- Add --diff and --force CLI flags
+  ([`8c63ad1`](https://github.com/NicholasZolton/pyhomedot/commit/8c63ad1b71cd4f30a5e9ef3bd45ca243733752ee))
+
+
 ## v1.3.0 (2026-03-27)
 
 ### Features
