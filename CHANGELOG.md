@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.5.0 (2026-03-27)
+
+### Features
+
+- Add cask support for Homebrew packages
+  ([`576d199`](https://github.com/NicholasZolton/pyhomedot/commit/576d199cfece90c6d68a81f6758636cb2db53ded))
+
+
 ## v1.4.0 (2026-03-27)
 
 ### Features
