@@ -21,16 +21,23 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Run semantic-release
+      - uses: astral-sh/setup-uv@v4
+
+      - name: Install semantic-release
+        run: pip install python-semantic-release
+
+      - name: Semantic release
         id: release
-        uses: python-semantic-release/python-semantic-release@v9
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+        run: semantic-release version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish to PyPI
-        if: steps.release.outputs.released == 'true'
-        uses: astral-sh/setup-uv@v4
+      - name: Publish to GitHub
+        if: success()
+        run: semantic-release publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and publish
-        if: steps.release.outputs.released == 'true'
+      - name: Build and publish to PyPI
+        if: success()
         run: uv build && uv publish --trusted-publishing always
