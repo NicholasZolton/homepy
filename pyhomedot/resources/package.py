@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import subprocess
 
-from pyhomedot.resources.base import Resource
+from pyhomedot.resources.base import Resource, noninteractive_env
 
 VALID_PROVIDERS = {"apt", "brew", "mise"}
 
@@ -12,7 +12,15 @@ VALID_PROVIDERS = {"apt", "brew", "mise"}
 class PackageResource(Resource):
     """Installs or uninstalls packages using supported providers (apt, brew, mise)."""
 
-    def __init__(self, name: str, provider: str, installed: bool = True, version: str | None = None, cask: bool = False) -> None:
+    def __init__(
+        self,
+        name: str,
+        provider: str,
+        installed: bool = True,
+        version: str | None = None,
+        cask: bool = False,
+        interactive: bool = False,
+    ) -> None:
         if provider not in VALID_PROVIDERS:
             raise ValueError(f"Invalid provider '{provider}'. Must be one of: {', '.join(sorted(VALID_PROVIDERS))}")
         if cask and provider != "brew":
@@ -22,6 +30,7 @@ class PackageResource(Resource):
         self.installed = installed
         self.version = version
         self.cask = cask
+        self.interactive = interactive
 
     def _package_spec(self) -> str:
         """Build the package specifier with optional version."""
@@ -32,6 +41,19 @@ class PackageResource(Resource):
         else:
             # brew and mise use name@version format
             return f"{self.name}@{self.version}"
+
+    def _build_env(self) -> dict[str, str] | None:
+        """Return the subprocess environment, or None to inherit the default."""
+        if self.interactive:
+            return None
+        extra: dict[str, str] = {}
+        if self.provider == "apt":
+            extra["DEBIAN_FRONTEND"] = "noninteractive"
+        elif self.provider == "brew":
+            extra["HOMEBREW_NO_AUTO_UPDATE"] = "1"
+        elif self.provider == "mise":
+            extra["MISE_YES"] = "1"
+        return noninteractive_env(extra)
 
     def _build_command(self) -> list[str]:
         spec = self._package_spec()
@@ -68,7 +90,7 @@ class PackageResource(Resource):
             print(f"[dry-run] Would {action} package '{self.name}' via {self.provider}: {' '.join(cmd)}")
             return
 
-        result = subprocess.run(cmd, check=False)
+        result = subprocess.run(cmd, check=False, env=self._build_env())
         if result.returncode != 0:
             action = "install" if self.installed else "uninstall"
             print(f"Warning: Failed to {action} package '{self.name}' via {self.provider} (exit code {result.returncode})")

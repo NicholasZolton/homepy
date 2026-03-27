@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import subprocess
 
-from pyhomedot.resources.base import Resource
+from pyhomedot.resources.base import Resource, noninteractive_env
 
 
 class ShellResource(Resource):
@@ -15,10 +15,18 @@ class ShellResource(Resource):
         command: str,
         cwd: str | None = None,
         env: dict[str, str] | None = None,
+        interactive: bool = False,
     ) -> None:
         self.command = command
         self.cwd = cwd
         self.env = env
+        self.interactive = interactive
+
+    def _build_env(self) -> dict[str, str] | None:
+        """Return the subprocess environment, or None to inherit the default."""
+        if self.interactive:
+            return self.env
+        return noninteractive_env(self.env)
 
     def generate(self, *, dry_run: bool = False, show_diff: bool = False) -> None:
         if dry_run:
@@ -33,7 +41,7 @@ class ShellResource(Resource):
             shell=True,
             check=False,
             cwd=self.cwd,
-            env=self.env,
+            env=self._build_env(),
         )
         if result.returncode != 0:
             raise RuntimeError(

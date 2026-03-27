@@ -62,6 +62,32 @@ class TestShellResource:
             env = call_args[1].get("env")
             assert env is not None
             assert env["FOO"] == "bar"
+            assert env["NONINTERACTIVE"] == "1"
+
+    def test_noninteractive_env_set_by_default(self) -> None:
+        r = ShellResource("echo hello")
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            r.generate()
+            env = mock_run.call_args[1].get("env")
+            assert env is not None
+            assert env["NONINTERACTIVE"] == "1"
+
+    def test_interactive_skips_noninteractive_env(self) -> None:
+        r = ShellResource("echo hello", interactive=True)
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            r.generate()
+            env = mock_run.call_args[1].get("env")
+            assert env is None
+
+    def test_interactive_with_custom_env(self) -> None:
+        r = ShellResource("echo $FOO", env={"FOO": "bar"}, interactive=True)
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            r.generate()
+            env = mock_run.call_args[1].get("env")
+            assert env == {"FOO": "bar"}
 
     def test_cwd_defaults_none(self) -> None:
         r = ShellResource("echo hello")

@@ -171,6 +171,41 @@ class TestPackageResource:
         assert "--cask" in captured.out
         assert "claude-code" in captured.out
 
+    def test_apt_sets_noninteractive_env(self) -> None:
+        r = PackageResource("htop", "apt")
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            r.generate()
+            env = mock_run.call_args[1]["env"]
+            assert env["DEBIAN_FRONTEND"] == "noninteractive"
+            assert env["NONINTERACTIVE"] == "1"
+
+    def test_brew_sets_noninteractive_env(self) -> None:
+        r = PackageResource("htop", "brew")
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            r.generate()
+            env = mock_run.call_args[1]["env"]
+            assert env["HOMEBREW_NO_AUTO_UPDATE"] == "1"
+            assert env["NONINTERACTIVE"] == "1"
+
+    def test_mise_sets_noninteractive_env(self) -> None:
+        r = PackageResource("node", "mise")
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            r.generate()
+            env = mock_run.call_args[1]["env"]
+            assert env["MISE_YES"] == "1"
+            assert env["NONINTERACTIVE"] == "1"
+
+    def test_interactive_skips_noninteractive_env(self) -> None:
+        r = PackageResource("htop", "apt", interactive=True)
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            r.generate()
+            env = mock_run.call_args[1]["env"]
+            assert env is None
+
     def test_dry_run_with_version(self, capsys: pytest.CaptureFixture[str]) -> None:
         r = PackageResource("node", "brew", version="20")
         r.generate(dry_run=True)

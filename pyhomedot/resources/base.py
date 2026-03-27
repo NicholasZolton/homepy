@@ -2,7 +2,17 @@
 
 from __future__ import annotations
 
+import os
 from abc import ABC, abstractmethod
+
+
+def noninteractive_env(extra: dict[str, str] | None = None) -> dict[str, str]:
+    """Return the current environment with NONINTERACTIVE=1 and any extra vars merged in."""
+    env = os.environ.copy()
+    env["NONINTERACTIVE"] = "1"
+    if extra is not None:
+        env.update(extra)
+    return env
 
 
 class Resource(ABC):

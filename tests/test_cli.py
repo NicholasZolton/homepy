@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from pyhomedot import Home
 from pyhomedot.resources.base import Resource
 
