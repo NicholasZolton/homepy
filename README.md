@@ -33,6 +33,18 @@ if __name__ == "__main__":
     main()
 ```
 
+## Prerequisites
+
+| Prerequisite | macOS | Linux (Debian/Ubuntu) |
+|---|---|---|
+| Python >= 3.13 | `brew install python@3.13` | `apt-get install python3.13` or via [pyenv](https://github.com/pyenv/pyenv) |
+| [uv](https://docs.astral.sh/uv/) | `brew install uv` | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+| [Homebrew](https://brew.sh/) (for `brew` provider) | `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"` | — |
+| APT (for `apt` provider) | — | Pre-installed |
+| [mise](https://mise.jdx.dev/) (for `mise` provider) | `brew install mise` | `curl https://mise.jdx.dev/install.sh \| sh` |
+
+> Only the package manager prerequisites for providers you actually use are required. Python and uv are always required.
+
 Then, all we need to do is run the script:
 
 ```bash
@@ -75,6 +87,17 @@ PackageResource("htop", "apt", version="3.2.1")     # apt-get install htop=3.2.1
 ```
 
 Each provider uses its native version syntax (`@` for brew/mise, `=` for apt).
+
+#### Casks (Homebrew)
+
+To install a Homebrew cask instead of a formula, pass `cask=True`:
+
+```python
+PackageResource("claude-code", "brew", cask=True)       # brew install --cask claude-code
+PackageResource("firefox", "brew", cask=True, version="130")  # brew install --cask firefox@130
+```
+
+The `cask` option is only valid with the `brew` provider — using it with any other provider raises a `ValueError`.
 
 ### TemplateResource
 

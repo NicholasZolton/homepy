@@ -132,6 +132,45 @@ class TestPackageResource:
             cmd = mock_run.call_args[0][0]
             assert "node@20" in cmd
 
+    def test_cask_defaults_false(self) -> None:
+        r = PackageResource("htop", "brew")
+        assert r.cask is False
+
+    def test_cask_with_non_brew_raises(self) -> None:
+        with pytest.raises(ValueError, match="cask"):
+            PackageResource("htop", "apt", cask=True)
+
+    def test_brew_cask_install(self) -> None:
+        r = PackageResource("claude-code", "brew", cask=True)
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            r.generate()
+            cmd = mock_run.call_args[0][0]
+            assert cmd == ["brew", "install", "--cask", "claude-code"]
+
+    def test_brew_cask_uninstall(self) -> None:
+        r = PackageResource("claude-code", "brew", installed=False, cask=True)
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            r.generate()
+            cmd = mock_run.call_args[0][0]
+            assert cmd == ["brew", "uninstall", "--cask", "claude-code"]
+
+    def test_brew_cask_install_with_version(self) -> None:
+        r = PackageResource("claude-code", "brew", cask=True, version="1.0")
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0)
+            r.generate()
+            cmd = mock_run.call_args[0][0]
+            assert cmd == ["brew", "install", "--cask", "claude-code@1.0"]
+
+    def test_brew_cask_dry_run(self, capsys: pytest.CaptureFixture[str]) -> None:
+        r = PackageResource("claude-code", "brew", cask=True)
+        r.generate(dry_run=True)
+        captured = capsys.readouterr()
+        assert "--cask" in captured.out
+        assert "claude-code" in captured.out
+
     def test_dry_run_with_version(self, capsys: pytest.CaptureFixture[str]) -> None:
         r = PackageResource("node", "brew", version="20")
         r.generate(dry_run=True)

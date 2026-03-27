@@ -12,13 +12,16 @@ VALID_PROVIDERS = {"apt", "brew", "mise"}
 class PackageResource(Resource):
     """Installs or uninstalls packages using supported providers (apt, brew, mise)."""
 
-    def __init__(self, name: str, provider: str, installed: bool = True, version: str | None = None) -> None:
+    def __init__(self, name: str, provider: str, installed: bool = True, version: str | None = None, cask: bool = False) -> None:
         if provider not in VALID_PROVIDERS:
             raise ValueError(f"Invalid provider '{provider}'. Must be one of: {', '.join(sorted(VALID_PROVIDERS))}")
+        if cask and provider != "brew":
+            raise ValueError("The 'cask' option is only supported with the 'brew' provider")
         self.name = name
         self.provider = provider
         self.installed = installed
         self.version = version
+        self.cask = cask
 
     def _package_spec(self) -> str:
         """Build the package specifier with optional version."""
@@ -39,9 +42,17 @@ class PackageResource(Resource):
                 return ["apt-get", "remove", "-y", self.name]
         elif self.provider == "brew":
             if self.installed:
-                return ["brew", "install", spec]
+                cmd = ["brew", "install"]
+                if self.cask:
+                    cmd.append("--cask")
+                cmd.append(spec)
+                return cmd
             else:
-                return ["brew", "uninstall", self.name]
+                cmd = ["brew", "uninstall"]
+                if self.cask:
+                    cmd.append("--cask")
+                cmd.append(self.name)
+                return cmd
         elif self.provider == "mise":
             if self.installed:
                 return ["mise", "use", "-g", spec]
