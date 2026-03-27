@@ -12,6 +12,7 @@ _SENTINEL: object = object()
 _DRY_RUN_LEGEND = f"""  {color('Legend:', BOLD)}
     {color('OK', GREEN)}       — symlink already correct (no-op)
     {color('CREATE', GREEN)}   — target missing, will create symlink
+    {color('IDENTICAL', CYAN)} — existing file/dir with same content (safe to replace)
     {color('REPLACE', YELLOW)}  — existing file/dir will be replaced with symlink
     {color('RELINK', YELLOW)}   — symlink exists but points to wrong target
     {color('CONFLICT', RED)} — existing file/dir, will skip (force=False)

@@ -2,12 +2,25 @@
 
 from __future__ import annotations
 
+import filecmp
 import os
 import shutil
 from pathlib import Path
 
 from pyhomedot.color import BOLD, CYAN, DIM, GREEN, RED, YELLOW, color
 from pyhomedot.resources.base import Resource
+
+
+def _contents_match(a: Path, b: Path) -> bool:
+    """Check if two paths have identical content (works for files and directories)."""
+    if a.is_file() and b.is_file():
+        return filecmp.cmp(a, b, shallow=False)
+    if a.is_dir() and b.is_dir():
+        dcmp = filecmp.dircmp(a, b, ignore=[".git", ".jj", ".DS_Store", "node_modules", "__pycache__"])
+        if dcmp.left_only or dcmp.right_only or dcmp.diff_files:
+            return False
+        return all(_contents_match(a / sub, b / sub) for sub in dcmp.common_dirs)
+    return False
 
 
 class SymlinkResource(Resource):
@@ -75,13 +88,16 @@ class SymlinkResource(Resource):
             else:
                 # Regular file or directory
                 kind = "directory" if target.is_dir() else "file"
+                identical = _contents_match(target, source)
                 if dry_run:
-                    if self.force:
+                    if identical:
+                        print(f"  {color('IDENTICAL', CYAN)} {label} {color(f'(existing {kind}, same content — safe to replace)', DIM)}")
+                    elif self.force:
                         print(f"  {color('REPLACE', YELLOW)}  {label} {color(f'(existing {kind} -> symlink)', DIM)}")
                     else:
                         print(f"  {color('CONFLICT', RED)} {label} {color(f'(existing {kind}, would skip)', DIM)}")
                     return
-                if self.force:
+                if self.force or identical:
                     if target.is_dir():
                         shutil.rmtree(target)
                     else:
