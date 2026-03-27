@@ -71,3 +71,17 @@ If the target does not exist, the symlink is created directly.
 
 **PackageResource** delegates directly to the underlying package manager with no collision detection — if a package is already installed, the package manager handles it.
 
+## Planned
+
+### TemplateResource
+
+Like `SymlinkResource`, but renders variables into config files before writing them. Useful for dotfiles that need per-machine variation (e.g., injecting a username or hostname into a `.gitconfig`).
+
+### ShellResource
+
+Runs arbitrary shell commands during generation. Covers configuration that goes beyond files and packages, such as `defaults write` on macOS or `gsettings` on Linux.
+
+### Dry-run mode
+
+A `--dry-run` flag that prints what would happen without making any changes. Especially useful since homepy does not manage state and there is no built-in undo.
+
