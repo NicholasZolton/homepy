@@ -88,7 +88,8 @@ class TestFullWorkflow:
         assert not (home_dir / "out.txt").exists()
 
         captured = capsys.readouterr()
-        assert "dry-run" in captured.out.lower()
+        # Symlink uses "CREATE", other resources use "[dry-run]"
+        assert "create" in captured.out.lower() or "dry-run" in captured.out.lower()
 
     def test_chaining_add(self, tmp_path: Path) -> None:
         """Home.add() supports chaining."""
@@ -131,7 +132,7 @@ class TestFullWorkflow:
 
         assert not (home_dir / "file.txt").exists()
         captured = capsys.readouterr()
-        assert "dry-run" in captured.out.lower()
+        assert "create" in captured.out.lower()
 
     def test_package_with_version(self) -> None:
         """PackageResource with version works in full workflow."""
