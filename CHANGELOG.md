@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.6.0 (2026-03-27)
+
+### Features
+
+- Set noninteractive env vars for all subprocess calls
+  ([`c559507`](https://github.com/NicholasZolton/pyhomedot/commit/c5595070ca2d60f49d41d4e6ab1ee0d1d6e5a31f))
+
+
 ## v1.5.0 (2026-03-27)
 
 ### Features
