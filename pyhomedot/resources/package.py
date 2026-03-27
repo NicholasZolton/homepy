@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import subprocess
 
-from homepy.resources.base import Resource
+from pyhomedot.resources.base import Resource
 
 VALID_PROVIDERS = {"apt", "brew", "mise"}
 

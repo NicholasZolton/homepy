@@ -7,8 +7,8 @@ Similar to something like [Pulumi](https://github.com/pulumi/pulumi) or [SST](ht
 Here's a simple example:
 
 ```python
-from homepy import Home
-from homepy.resources import SymlinkResource, PackageResource
+from pyhomedot import Home
+from pyhomedot.resources import SymlinkResource, PackageResource
 
 def main():
     home = Home()
@@ -36,7 +36,7 @@ if __name__ == "__main__":
 Then, all we need to do is run the script:
 
 ```bash
-uvx --with homepy python main.py
+uvx --with pyhomedot python main.py
 ```
 
 > Since this is currently a thin wrapper around os commands and does not manage state, it will NOT remove anything automatically, such as if you remove a PackageResource. Instead, you will need to add `installed=False` to the PackageResource.
@@ -146,14 +146,14 @@ If the target does not exist, the symlink is created directly.
 
 ## Dry-run Mode
 
-A `--dry-run` flag that prints what would happen without making any changes. Especially useful since homepy does not manage state and there is no built-in undo.
+A `--dry-run` flag that prints what would happen without making any changes. Especially useful since pyhomedot does not manage state and there is no built-in undo.
 
 You can enable dry-run mode in two ways:
 
 1. **CLI flag** — pass `--dry-run` when running your script:
 
    ```bash
-   uvx --with homepy python main.py --dry-run
+   uvx --with pyhomedot python main.py --dry-run
    ```
 
 2. **Programmatically** — pass `dry_run=True` to `home.generate()`:

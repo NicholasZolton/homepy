@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from homepy.resources import SymlinkResource
+from pyhomedot.resources import SymlinkResource
 
 
 class TestSymlinkResource:

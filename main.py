@@ -1,11 +1,11 @@
-"""Example usage of homepy."""
+"""Example usage of pyhomedot."""
 
 from __future__ import annotations
 
 import os
 
-from homepy import Home
-from homepy.resources import SymlinkResource, PackageResource
+from pyhomedot import Home
+from pyhomedot.resources import SymlinkResource, PackageResource
 
 
 def main() -> None:

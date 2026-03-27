@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from homepy.resources import TemplateResource
+from pyhomedot.resources import TemplateResource
 
 
 class TestTemplateResource:

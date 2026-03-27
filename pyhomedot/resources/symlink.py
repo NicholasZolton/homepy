@@ -6,7 +6,7 @@ import os
 import shutil
 from pathlib import Path
 
-from homepy.resources.base import Resource
+from pyhomedot.resources.base import Resource
 
 
 class SymlinkResource(Resource):

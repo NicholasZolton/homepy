@@ -7,8 +7,8 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from homepy import Home
-from homepy.resources import (
+from pyhomedot import Home
+from pyhomedot.resources import (
     SymlinkResource,
     PackageResource,
     TemplateResource,

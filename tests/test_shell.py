@@ -6,7 +6,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from homepy.resources import ShellResource
+from pyhomedot.resources import ShellResource
 
 
 class TestShellResource:

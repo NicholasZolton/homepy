@@ -1,10 +1,10 @@
-"""Home - the core orchestrator for homepy."""
+"""Home - the core orchestrator for pyhomedot."""
 
 from __future__ import annotations
 
 import sys
 
-from homepy.resources.base import Resource
+from pyhomedot.resources.base import Resource
 
 _SENTINEL: object = object()
 

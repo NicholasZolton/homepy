@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from homepy.resources.base import Resource
+from pyhomedot.resources.base import Resource
 
 
 class TemplateResource(Resource):

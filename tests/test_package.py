@@ -6,7 +6,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from homepy.resources import PackageResource
+from pyhomedot.resources import PackageResource
 
 
 class TestPackageResource:

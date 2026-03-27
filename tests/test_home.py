@@ -6,8 +6,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from homepy import Home
-from homepy.resources.base import Resource
+from pyhomedot import Home
+from pyhomedot.resources.base import Resource
 
 
 class TestResource:

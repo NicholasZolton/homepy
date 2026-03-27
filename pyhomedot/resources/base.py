@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 
 
 class Resource(ABC):
-    """Abstract base class for all homepy resources."""
+    """Abstract base class for all pyhomedot resources."""
 
     @abstractmethod
     def generate(self, *, dry_run: bool = False) -> None:
