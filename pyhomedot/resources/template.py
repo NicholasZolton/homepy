@@ -44,7 +44,7 @@ class TemplateResource(Resource):
 
         return re.sub(r"\{\{\s*(\w+)\s*\}\}", replace_var, template_content)
 
-    def generate(self, *, dry_run: bool = False) -> None:
+    def generate(self, *, dry_run: bool = False, show_diff: bool = False) -> None:
         source = self._resolve_source()
         target = self._resolve_target()
         template_content = source.read_text()

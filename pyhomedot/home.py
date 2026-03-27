@@ -6,6 +6,7 @@ import sys
 
 from pyhomedot.color import BOLD, CYAN, DIM, GREEN, RED, YELLOW, color
 from pyhomedot.resources.base import Resource
+from pyhomedot.resources.symlink import SymlinkResource
 
 _SENTINEL: object = object()
 
@@ -31,25 +32,37 @@ class Home:
         self.resources.extend(resources)
         return self
 
-    def generate(self, *, dry_run: bool | object = _SENTINEL) -> None:
+    def generate(
+        self,
+        *,
+        dry_run: bool | object = _SENTINEL,
+        force: bool | object = _SENTINEL,
+        show_diff: bool | object = _SENTINEL,
+    ) -> None:
         """Generate all registered resources.
 
-        If dry_run is not explicitly passed, checks for --dry-run in sys.argv.
+        If flags are not explicitly passed, checks sys.argv for CLI flags.
 
         Args:
             dry_run: If True, print what would happen without making changes.
-                     If not provided, checks sys.argv for --dry-run flag.
+            force: If True, apply force to resources that don't explicitly set force=False.
+            show_diff: If True, show diffs for conflicting files.
         """
-        if dry_run is _SENTINEL:
-            resolved_dry_run = "--dry-run" in sys.argv
-        else:
-            resolved_dry_run = bool(dry_run)
+        resolved_dry_run = bool(dry_run) if dry_run is not _SENTINEL else "--dry-run" in sys.argv
+        resolved_force = bool(force) if force is not _SENTINEL else "--force" in sys.argv
+        resolved_diff = bool(show_diff) if show_diff is not _SENTINEL else "--diff" in sys.argv
+
+        # Apply CLI --force to SymlinkResources that didn't explicitly set force
+        if resolved_force:
+            for resource in self.resources:
+                if isinstance(resource, SymlinkResource):
+                    resource._apply_cli_force(True)
 
         if resolved_dry_run:
             print(_DRY_RUN_LEGEND)
 
         for resource in self.resources:
-            resource.generate(dry_run=resolved_dry_run)
+            resource.generate(dry_run=resolved_dry_run, show_diff=resolved_diff)
 
         total = len(self.resources)
         if resolved_dry_run:

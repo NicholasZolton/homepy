@@ -22,7 +22,7 @@ class TestDryRunFlag:
         with patch("sys.argv", ["main.py", "--dry-run"]):
             home.generate()
 
-        r.generate.assert_called_once_with(dry_run=True)
+        r.generate.assert_called_once_with(dry_run=True, show_diff=False)
 
     def test_generate_no_dry_run_flag(self) -> None:
         """Without --dry-run in sys.argv, generate runs normally."""
@@ -33,7 +33,7 @@ class TestDryRunFlag:
         with patch("sys.argv", ["main.py"]):
             home.generate()
 
-        r.generate.assert_called_once_with(dry_run=False)
+        r.generate.assert_called_once_with(dry_run=False, show_diff=False)
 
     def test_explicit_dry_run_overrides_argv(self) -> None:
         """Explicit dry_run=True overrides sys.argv (no flag needed)."""
@@ -44,7 +44,7 @@ class TestDryRunFlag:
         with patch("sys.argv", ["main.py"]):
             home.generate(dry_run=True)
 
-        r.generate.assert_called_once_with(dry_run=True)
+        r.generate.assert_called_once_with(dry_run=True, show_diff=False)
 
     def test_explicit_dry_run_false_overrides_argv(self) -> None:
         """Explicit dry_run=False overrides --dry-run in sys.argv."""
@@ -55,4 +55,4 @@ class TestDryRunFlag:
         with patch("sys.argv", ["main.py", "--dry-run"]):
             home.generate(dry_run=False)
 
-        r.generate.assert_called_once_with(dry_run=False)
+        r.generate.assert_called_once_with(dry_run=False, show_diff=False)

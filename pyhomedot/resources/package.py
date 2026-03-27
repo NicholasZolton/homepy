@@ -50,7 +50,7 @@ class PackageResource(Resource):
         else:
             raise ValueError(f"Unknown provider: {self.provider}")
 
-    def generate(self, *, dry_run: bool = False) -> None:
+    def generate(self, *, dry_run: bool = False, show_diff: bool = False) -> None:
         cmd = self._build_command()
         if dry_run:
             action = "install" if self.installed else "uninstall"

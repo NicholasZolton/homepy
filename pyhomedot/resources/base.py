@@ -9,9 +9,10 @@ class Resource(ABC):
     """Abstract base class for all pyhomedot resources."""
 
     @abstractmethod
-    def generate(self, *, dry_run: bool = False) -> None:
+    def generate(self, *, dry_run: bool = False, show_diff: bool = False) -> None:
         """Generate/apply this resource.
 
         Args:
             dry_run: If True, print what would happen without making changes.
+            show_diff: If True, show diffs for conflicting files.
         """

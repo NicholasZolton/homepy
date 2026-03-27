@@ -53,15 +53,15 @@ class TestHome:
         home.resources.append(r1)
         home.resources.append(r2)
         home.generate()
-        r1.generate.assert_called_once_with(dry_run=False)
-        r2.generate.assert_called_once_with(dry_run=False)
+        r1.generate.assert_called_once_with(dry_run=False, show_diff=False)
+        r2.generate.assert_called_once_with(dry_run=False, show_diff=False)
 
     def test_home_generate_dry_run(self) -> None:
         home = Home()
         r1 = MagicMock(spec=Resource)
         home.resources.append(r1)
         home.generate(dry_run=True)
-        r1.generate.assert_called_once_with(dry_run=True)
+        r1.generate.assert_called_once_with(dry_run=True, show_diff=False)
 
     def test_home_generate_empty_resources(self) -> None:
         """Generate with no resources does nothing and doesn't error."""

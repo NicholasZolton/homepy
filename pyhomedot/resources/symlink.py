@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import difflib
 import filecmp
 import os
 import shutil
@@ -9,6 +10,8 @@ from pathlib import Path
 
 from pyhomedot.color import BOLD, CYAN, DIM, GREEN, RED, YELLOW, color
 from pyhomedot.resources.base import Resource
+
+_FORCE_SENTINEL: object = object()
 
 
 def _contents_match(a: Path, b: Path) -> bool:
@@ -23,6 +26,87 @@ def _contents_match(a: Path, b: Path) -> bool:
     return False
 
 
+def _read_text_safe(path: Path) -> str | None:
+    """Read file as text, return None if binary or unreadable."""
+    try:
+        return path.read_text(encoding="utf-8", errors="strict")
+    except (UnicodeDecodeError, OSError):
+        return None
+
+
+def _show_file_diff(existing: Path, source: Path, label: str) -> None:
+    """Show a unified diff between existing file and source file."""
+    existing_text = _read_text_safe(existing)
+    source_text = _read_text_safe(source)
+
+    if existing_text is None or source_text is None:
+        print(f"    {color('(binary or unreadable — cannot show diff)', DIM)}")
+        return
+
+    diff = list(
+        difflib.unified_diff(
+            existing_text.splitlines(keepends=True),
+            source_text.splitlines(keepends=True),
+            fromfile=f"current: ~/{label}",
+            tofile=f"repo: {source}",
+        )
+    )
+    if not diff:
+        print(f"    {color('(files are identical)', DIM)}")
+        return
+
+    for line in diff:
+        line = line.rstrip("\n")
+        if line.startswith("+++") or line.startswith("---"):
+            print(f"    {color(line, BOLD)}")
+        elif line.startswith("+"):
+            print(f"    {color(line, GREEN)}")
+        elif line.startswith("-"):
+            print(f"    {color(line, RED)}")
+        elif line.startswith("@@"):
+            print(f"    {color(line, CYAN)}")
+        else:
+            print(f"    {line}")
+
+
+def _show_dir_diff(existing: Path, source: Path) -> None:
+    """Show a summary and file-level diffs for two directories."""
+    ignore = {".git", ".jj", ".DS_Store", "node_modules", "__pycache__"}
+    existing_files = {
+        p.relative_to(existing)
+        for p in existing.rglob("*")
+        if p.is_file() and not (set(p.parts) & ignore)
+    }
+    source_files = {
+        p.relative_to(source)
+        for p in source.rglob("*")
+        if p.is_file() and not (set(p.parts) & ignore)
+    }
+
+    only_existing = sorted(existing_files - source_files)
+    only_source = sorted(source_files - existing_files)
+    common = sorted(existing_files & source_files)
+
+    if only_existing:
+        print(f"    {color('Only in current:', YELLOW)}")
+        for f in only_existing:
+            print(f"      {f}")
+    if only_source:
+        print(f"    {color('Only in repo:', GREEN)}")
+        for f in only_source:
+            print(f"      {f}")
+
+    differing = [f for f in common if not filecmp.cmp(existing / f, source / f, shallow=False)]
+    if differing:
+        print(f"    {color('Files with differences:', CYAN)}")
+        for f in differing:
+            print(f"      {color(str(f), BOLD)}:")
+            _show_file_diff(existing / f, source / f, str(f))
+
+    if not only_existing and not only_source and not differing:
+        print(f"    {color('(directories are identical)', DIM)}")
+
+
 class SymlinkResource(Resource):
     """Creates symlinks from source files/directories to target locations relative to $HOME."""
 
@@ -31,13 +115,14 @@ class SymlinkResource(Resource):
         source: str,
         target: str,
         *,
-        force: bool = False,
+        force: bool | object = _FORCE_SENTINEL,
         source_root: Path | None = None,
         home_dir: Path | None = None,
     ) -> None:
         self.source = source
         self.target = target
-        self.force = force
+        self._force_explicit = force is not _FORCE_SENTINEL
+        self.force = bool(force) if force is not _FORCE_SENTINEL else False
         self._source_root = source_root or Path.cwd()
         self._home_dir = home_dir or Path.home()
 
@@ -53,7 +138,12 @@ class SymlinkResource(Resource):
         """Return ~/relative target path for display."""
         return f"~/{self.target}"
 
-    def generate(self, *, dry_run: bool = False) -> None:
+    def _apply_cli_force(self, cli_force: bool) -> None:
+        """Apply CLI --force flag if force wasn't explicitly set in code."""
+        if not self._force_explicit and cli_force:
+            self.force = True
+
+    def generate(self, *, dry_run: bool = False, show_diff: bool = False) -> None:
         source = self._resolve_source()
         target = self._resolve_target()
         label = self._short_target()
@@ -96,6 +186,11 @@ class SymlinkResource(Resource):
                         print(f"  {color('REPLACE', YELLOW)}  {label} {color(f'(existing {kind} -> symlink)', DIM)}")
                     else:
                         print(f"  {color('CONFLICT', RED)} {label} {color(f'(existing {kind}, would skip)', DIM)}")
+                    if show_diff and not identical:
+                        if target.is_dir():
+                            _show_dir_diff(target, source)
+                        else:
+                            _show_file_diff(target, source, self.target)
                     return
                 if self.force or identical:
                     if target.is_dir():

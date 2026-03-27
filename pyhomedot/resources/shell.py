@@ -20,7 +20,7 @@ class ShellResource(Resource):
         self.cwd = cwd
         self.env = env
 
-    def generate(self, *, dry_run: bool = False) -> None:
+    def generate(self, *, dry_run: bool = False, show_diff: bool = False) -> None:
         if dry_run:
             msg = f"[dry-run] Would run: {self.command}"
             if self.cwd:
