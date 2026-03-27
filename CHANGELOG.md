@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.3.0 (2026-03-27)
+
+### Features
+
+- Detect identical content in conflicts
+  ([`c3b710e`](https://github.com/NicholasZolton/pyhomedot/commit/c3b710ef07f36c548c7263573bb03ab0ff9e2144))
+
+
 ## v1.2.0 (2026-03-27)
 
 ### Features
