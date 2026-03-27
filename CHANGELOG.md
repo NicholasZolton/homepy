@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.2.0 (2026-03-27)
+
+### Features
+
+- Add legend to dry-run output and summary to both modes
+  ([`6765538`](https://github.com/NicholasZolton/pyhomedot/commit/6765538ab5f3b6fe9bb544f4af301f82019c6e0b))
+
+
 ## v1.1.0 (2026-03-27)
 
 ### Features
