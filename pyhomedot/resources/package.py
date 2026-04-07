@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import subprocess
+from typing import Literal
 
 from pyhomedot.resources.base import Resource, noninteractive_env
 
-VALID_PROVIDERS = {"apt", "brew", "mise"}
+Provider = Literal["apt", "brew", "mise"]
+VALID_PROVIDERS: set[Provider] = {"apt", "brew", "mise"}
 
 
 class PackageResource(Resource):
@@ -15,7 +17,7 @@ class PackageResource(Resource):
     def __init__(
         self,
         name: str,
-        provider: str,
+        provider: Provider,
         installed: bool = True,
         version: str | None = None,
         cask: bool = False,
