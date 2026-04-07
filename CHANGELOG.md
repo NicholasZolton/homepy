@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.7.0 (2026-04-07)
+
+### Features
+
+- Type PackageResource provider as Literal instead of str
+  ([`a480c23`](https://github.com/NicholasZolton/pyhomedot/commit/a480c232e3f46a6b62cd1bc16d76e0dcf12c745b))
+
+
 ## v1.6.0 (2026-03-27)
 
 ### Features
